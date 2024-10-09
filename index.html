@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Among Us Party Game</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+        .emergency-button {
+            background-color: #f44336;
+        }
+        .alert {
+            padding: 20px;
+            background-color: #f44336;
+            color: white;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="joinGame">
+        <h1>Join Among Us Party Game</h1>
+        <input type="text" id="playerName" placeholder="Enter your name">
+        <button class="button" onclick="joinGame()">Join Game</button>
+    </div>
+
+    <div id="gameScreen" class="hidden">
+        <h1>Among Us Party Game</h1>
+        <div class="card">
+            <h2>Your Role: <span id="playerRole"></span></h2>
+            <button onclick="toggleRole()">Toggle Role Visibility</button>
+        </div>
+        <div class="card">
+            <h2>Your Tasks:</h2>
+            <ul id="taskList"></ul>
+        </div>
+        <button class="button emergency-button" onclick="reportEmergency()">Report Emergency</button>
+    </div>
+
+    <div id="emergencyAlert" class="alert hidden">
+        <strong>Emergency Meeting!</strong> An emergency has been reported. All players gather immediately!
+    </div>
+
+    <script>
+        // Initialize Firebase (replace with your own config)
+        const firebaseConfig = {
+          apiKey: "AIzaSyBD4nKk3e5fYeDpfBkAcBzEd0VsvYrOLpI",
+          authDomain: "amongusparty-5665f.firebaseapp.com",
+          projectId: "amongusparty-5665f",
+          storageBucket: "amongusparty-5665f.appspot.com",
+          messagingSenderId: "767728875676",
+          appId: "1:767728875676:web:38eabf20a5e53dad775559"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const roles = ['Crewmate', 'Impostor'];
+        const tasks = [
+            'Fix wiring in the living room',
+            'Empty garbage in the kitchen',
+            'Align engine output in the garage',
+            'Upload data in the study',
+            'Swipe card at the front door',
+            'Clean O2 filter in the bathroom'
+        ];
+
+        let playerName = '';
+        let playerRole = '';
+        let playerTasks = [];
+        let playerId = '';
+
+        function joinGame() {
+            playerName = document.getElementById('playerName').value;
+            if (playerName) {
+                playerId = database.ref('players').push().key;
+                playerRole = roles[Math.floor(Math.random() * roles.length)];
+                playerTasks = tasks.sort(() => 0.5 - Math.random()).slice(0, 3);
+
+                database.ref('players/' + playerId).set({
+                    name: playerName,
+                    role: playerRole,
+                    tasks: playerTasks
+                });
+
+                document.getElementById('joinGame').classList.add('hidden');
+                document.getElementById('gameScreen').classList.remove('hidden');
+                updateGameScreen();
+            }
+        }
+
+        function updateGameScreen() {
+            document.getElementById('playerRole').textContent = playerRole;
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+            playerTasks.forEach(task => {
+                const li = document.createElement('li');
+                li.textContent = task;
+                taskList.appendChild(li);
+            });
+        }
+
+        function toggleRole() {
+            const roleElement = document.getElementById('playerRole');
+            if (roleElement.style.visibility === 'hidden') {
+                roleElement.style.visibility = 'visible';
+            } else {
+                roleElement.style.visibility = 'hidden';
+            }
+        }
+
+        function reportEmergency() {
+            database.ref('emergency').set({
+                reported: true,
+                time: Date.now()
+            });
+        }
+
+        // Listen for emergency reports
+        database.ref('emergency').on('value', (snapshot) => {
+            const emergency = snapshot.val();
+            if (emergency && emergency.reported) {
+                document.getElementById('emergencyAlert').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('emergencyAlert').classList.add('hidden');
+                }, 5000);
+            }
+        });
+
+        // Clean up when leaving the game
+        window.addEventListener('beforeunload', () => {
+            if (playerId) {
+                database.ref('players/' + playerId).remove();
+            }
+        });
+    </script>
+</body>
+</html>
