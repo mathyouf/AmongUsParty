@@ -137,9 +137,11 @@
         }
 
         function reportEmergency() {
-            database.ref('emergency').set({
+            const emergencyRef = database.ref('emergency');
+            emergencyRef.set({
                 reported: true,
-                time: Date.now()
+                time: firebase.database.ServerValue.TIMESTAMP,
+                reportedBy: playerName
             });
         }
 
@@ -147,12 +149,20 @@
         database.ref('emergency').on('value', (snapshot) => {
             const emergency = snapshot.val();
             if (emergency && emergency.reported) {
-                document.getElementById('emergencyAlert').classList.remove('hidden');
-                setTimeout(() => {
-                    document.getElementById('emergencyAlert').classList.add('hidden');
-                }, 5000);
+                showEmergencyAlert(emergency);
             }
         });
+
+        function showEmergencyAlert(emergency) {
+            const alertElement = document.getElementById('emergencyAlert');
+            alertElement.innerHTML = `<strong>Emergency Meeting!</strong> Reported by ${emergency.reportedBy} at ${new Date(emergency.time).toLocaleTimeString()}`;
+            alertElement.classList.remove('hidden');
+            setTimeout(() => {
+                alertElement.classList.add('hidden');
+                // Reset the emergency state after hiding the alert
+                database.ref('emergency').set(null);
+            }, 5000);
+        }
 
         // Clean up when leaving the game
         window.addEventListener('beforeunload', () => {
